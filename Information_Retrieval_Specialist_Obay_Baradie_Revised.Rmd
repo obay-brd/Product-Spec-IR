@@ -1,0 +1,244 @@
+---
+title: "Assignment 2"
+author: "Obay Baradie"
+date: "2024-04-01"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+# Introduction
+
+The following assignment we will use the data set (Products.csv) obtained by querying the original "electronics.xml" database in Basex. By querying, we extracted the columns, "Product ID", "ProductName", "Specifications", "CategoryID", and "SupplierID". The file was saved to a csv "Products.csv" and it contained 20 rows and 5 columns.
+
+The aim of the project is to find out which key words are vital to a product's specification. The report will be split into four sections:
+
+1. Extraction of the data
+2. Pre-processing sepcification text
+3. Analyzing 'Specification' text using TermDocumentMatrices
+4. Applying similarity Measures to compare products to 'Kappa Smart Watch'
+
+
+## Data Extraction/ Conversion to CSV
+
+The following code was used to extract the data from basex in the correct format:
+
+declare option output:method "csv";
+declare option output:csv "header=yes, separator=tab";
+for $d in doc('electronicsdb')/electronicsdb/productcategories/products
+return( <csv>
+  <record>
+        <ProductID>{$d/ProductID/text()}</ProductID>
+        <ProductName>{$d/ProductName/text()}</ProductName>
+        <Specifications>{$d/Specifications/text()}</Specifications>
+        <CategoryID>{$d/CategoryID/text()}</CategoryID>
+        <SupplierID>{$d/SupplierID/text()}</SupplierID>
+  </record>
+</csv>)
+
+
+To begin our Text-Analysis, the following packages are installed and loaded into the workspace, which will allow for the information retrieval
+```{r}
+#https://cran.r-project.org/web/packages/tm/index.html
+#install.packages("tm", dependencies = TRUE)
+#https://cran.r-project.org/web/packages/RWeka/index.html
+#install.packages("RWeka", dependencies = TRUE)
+#https://cran.r-project.org/web/packages/textstem/index.html
+#install.packages("textstem", dependencies = TRUE)
+#https://cran.r-project.org/web/packages/textclean/index.html
+#install.packages("textclean", dependencies = TRUE)
+#https://cran.r-project.org/web/packages/text2vec/index.html
+#install.packages("text2vec", dependencies = TRUE)
+#Loading the packages to the current workspace
+lstPackages <- c('tm', 'RWeka', 'textstem', 'textclean', 'text2vec')
+lapply(lstPackages, library, character.only = TRUE)
+```
+
+The data set is loaded in using "read_csv" with the file path. The length of the dataframe 20 rows and 4 columns. Before preparing the corpus for text-analysis, the id column is cleaned by adding the "product" in order to standardize the column and make easier the analysis. After that, the corpus for text-analysis is prepared.
+```{r}
+# Read The Sample Dataset
+library(readr)
+products_1 <- read_csv("C:\\Users\\obay\\Downloads\\Products.csv")
+
+#Calculating the number of products in the df
+numberofProducts <- length(products_1$ProductID)
+
+#Standardizing the product_id column to ensure each of the products is associated with a number
+products_1$ProductID <- paste0("Product", c(1:numberofProducts))
+
+# preparing the corpus
+ListofProducts <- tm::VectorSource(products_1$Specifications)
+
+
+ListofProducts$Names <- names(products_1$ProductID)
+
+prodcorp <- tm::VCorpus(ListofProducts)
+```
+
+## Pre-processing "Specification" text
+
+
+
+For the purpose of this project the "Specifications" column will be pre-processed for text analysis. This specific column holds specific information about each of the 20 products, which includes digital product specifications that are both quantitative and qualitative. Because of the quantitative nature of the product specifications, the pre-processing performed will not include number removals, as that would hinder the overall model.
+
+
+Displaying the 20 product specifications prior to the pre-text processing procedure
+```{r}
+prodcut_specs <- products_1$Specifications
+print(prodcut_specs)
+```
+lower casing will first be performed in order to unify the casing within each of the products.
+```{r}
+# lowercasing all alphabet terms in the specifications
+prodcorp <- tm::tm_map(prodcorp, content_transformer(tolower))
+```
+
+
+
+lemmatization will be used by applying a thesaurus to clean the text by chopping off prefixes/suffixes to obtain common roots. Moreover, this method was preferred over "stemming" as it enabled the deconstruction of words, while at the same time not reducing words to non-meaningful versions.
+```{r}
+# looping through the 20 products to perform lemmatization on each of their specifications
+# While considering the context, each word is reduced to its meaningful base form, "Lemma".
+for(i in 1:20){
+prodcorp[[i]]$content <-
+textstem::lemmatize_strings(prodcorp[[i]]$content,
+dictionary = lexicon::hash_lemmas)}
+
+```
+
+
+
+Products specifications was processed further by removing stop words within each product description. Removing the stop words ('the', 'a', 'be', 'then') allows the analysis to focus on the key attributes of each product.
+```{r}
+# Removal of stop words from each product's specification
+# utilizing the 'english' dictionary
+prodcorp <- tm::tm_map(prodcorp, removeWords, stopwords('english'))
+# utilizing 'SMART' collection of stop words
+prodcorp <- tm::tm_map(prodcorp, removeWords, stopwords('SMART'))
+```
+
+
+Each specification was finalized by removing any unnecessary punctuation and white space.
+```{r}
+#Removing punctuation using 'universal character properties'.
+prodcorp <- tm::tm_map(prodcorp, removePunctuation, ucp = TRUE, # Intra words dashes/commas will also removed
+preserve_intra_word_contractions = FALSE,
+preserve_intra_word_dashes = FALSE)   # Removes dashes
+prodcorp <- tm::tm_map(prodcorp, stripWhitespace) # Removing white space
+```
+
+Showcasing the pre-processed sepecifications for analysis.
+```{r}
+specs_processed <- sapply(prodcorp, as.character)
+print(specs_processed)
+```
+## Analyzing 'Specification' using TermDocumentMatrices
+
+
+Since the numbers are kept in the text, they are considered single words alongside the letters that follow/precede them, e.g. 64gb, 10in, a14. For that reason, this analysis will be more concerned with the single word values/numbers that are present within each product specification and the Uni-gram method will be used.
+
+### Unigram TDM
+
+The unigram model is used as it allows the count of a variety of words that appear in a several different product specifications. In this case, the presence or frequency of each word is used independently of any other words. This model assumes that the probability of each word occurring in a product specification is independent of any other words around it.
+```{r}
+# Creating a uni-gram Term Document Matrix
+term.doc.matrix.uni <-
+tm::TermDocumentMatrix(prodcorp)
+# displaying a portion of the matrix 10X10
+tm::inspect(term.doc.matrix.uni[1:10,1:10])
+
+# Represent TDM in a matrix format and display its dimensions
+TDM_unigram <- as.matrix(term.doc.matrix.uni)
+#showing the dimension of the original matrix
+dim(TDM_unigram)
+head(TDM_unigram)
+```
+The resulting TD matrix consists of 143 words split into 20 docs. Above, the matrix shows the words belonging to which numbered product. The sparsity measure of 94% indicates that there is a large vocabulary of terms that do not occur in most of the product specifications. This is evidence of a large presence of words/terms that were not removed in the pre-processing stage. Hence, will need to get removed in the adjustment phase below.
+
+
+### Bi-gram TDM
+
+Bi-gram model would take into account the words that precede each other word to tally the occurrences of the combination of words in each product specification. For the purpose of this investigation, the word dependencies do not provide significant insight with regards to the analysis.
+```{r}
+# Creating the bi-gram TDM
+tokenizer <-
+function(x) RWeka::NGramTokenizer(x, RWeka::Weka_control(min=2, max=2))
+term.doc.matrix.bi <-
+tm::TermDocumentMatrix(prodcorp, control = list(tokenize=tokenizer))
+tm::inspect(term.doc.matrix.bi[1:10,1:10])
+
+# Represent TDM in a matrix format and display its dimensions
+TDM_bigram <- as.matrix(term.doc.matrix.bi)
+dim(TDM_bigram)
+head(TDM_bigram)
+```
+
+
+### Reducing Sparse Terms
+
+The initial uni-gram TDM produced a rather large sparsity of terms, the next step is to remove the sparse terms in order to reduce the overall dimension of the Term doc matrix. To do this, the "removeSparseTerms" function is used alongside an argument of 0.86, which was chosen to remove a term if it appeared in less than 86% of documents. This figure was chosen in order to reduce the sparsity but at the same time, avoid removing valuable terms.
+```{r}
+# Reduce the dimension of the TDM uni-gram matrix
+Reduced_Dim_uni_TDM <- tm::removeSparseTerms(term.doc.matrix.uni, 0.86)
+tm::inspect(Reduced_Dim_uni_TDM[1:10,1:10]) # inspecting the first 10 terms
+
+# Represent the TDM as a regular matrix
+Reduced_Dim_uni_TDM <- as.matrix(Reduced_Dim_uni_TDM)
+dim(Reduced_Dim_uni_TDM)
+head(Reduced_Dim_uni_TDM)
+```
+As seen above, removing the sparse words has dropped the sparsity metric down 73%. The matrix now consists of terms that are present in at least 3 different product specifications.In other words, only terms that appear in more than 14% of the product specs were retained.
+
+## Similarity Analysis
+
+Since the aim of the analysis is to compare terms across all the product specifications, the TF-IDF weighting measure is the preferred choice, although the TF will also be showcased. The aim of this analysis is to explore the importance of digital terms (specs), whether qualitative or numeric across all products within the data set. This will be used to compare terms in each product specification across all products in the set. Through this method we reduce the weight of terms that appear frequently across many documents, which highlights the terms that are more unique to each document.
+
+
+In order to compare relevance of each term to other specifications, we calculate the TD-IDF of the unigram model. we begin by initiating and declaring the weights of the terms for the analysis.
+```{r}
+# Declaring weights (TF-IDF variants)
+idf_weights <- function(tf.vec) {
+# Computes tfidf weights from term frequency vector
+n_products <- length(tf.vec)   # declare number of products variable
+product_frequency <- length(tf.vec[tf.vec > 0])  
+weights <- rep(0, length(tf.vec))
+relative_frequency <- tf.vec[tf.vec > 0] / sum(tf.vec[tf.vec > 0])
+weights[tf.vec > 0] <- relative_frequency *
+log10(n_products/product_frequency)
+return(weights)
+}
+```
+
+We perform the tf-idf weighting on the reduced uni-gram model in order to focus on the common occurring terms in the product specifications.
+```{r}
+#Compute the TF-IDF (unigram)
+TF_IDF_matrix_uni <- t(apply(as.matrix(Reduced_Dim_uni_TDM), 1,
+FUN = function(row) {idf_weights(row)}))
+colnames(TF_IDF_matrix_uni) <- products_1$ProductID
+head(TF_IDF_matrix_uni)
+dim(TF_IDF_matrix_uni)
+```
+In the tf-idf matrix each row represents a term and each columns representing a product (1 of 20). The numbers within the matrix represent the tf-idf scores for term with respect to each product. For example, the term "color" has a tf-idf score of 0.2746362 for "product1", which shows it's relevance to this product in comparison to other products. A score of 0 indicates that the term does not appear in the product's specification and has not significance in the analysis. The tf-idf scores help identify which terms are most characteristic of each product's description, considering the entire corpus of products.
+
+```{r}
+#Compute Cosine Similarity indices for the uni-gram TDM
+cosine_sim_matrix_uni <-
+text2vec::sim2(t(TF_IDF_matrix_uni), method = 'cosine')
+
+#Display Ranked Lists
+sort(cosine_sim_matrix_uni["Product10", ], decreasing = TRUE)[1:24]
+```
+```{r}
+similar_products <- c("Product17", "Product9", "Product18")  # assigning the products of interest to a variable
+
+similar_products_names <- subset(products_1, ProductID %in% similar_products)[,c("ProductID", "ProductName")] # Sub-setting to find the names of the products
+
+print(similar_products_names)
+```
+
+## Conclusion
+
+The final test conducted with the model is the 'cosine' similarity test. This method is used to determine each product's relevance (or similarity) to a baseline product. "Kappa Smart Watch", also known as "Product10", was selected as the baseline and chosen for comparison. Based on the term-frequency discussed above, it is clear that Product17, "Rho Monitor"  is most similar to "Kappa Smart Watch" with a score 0.9276515. Following that, Products9, "Iota Smart Watch" and Products18, "Sigma Monitor", were 2nd and 3rd place respectively with regards to similarity scores.
+
+Overall, with information retrieval processes the products specifications were pre-processed and analyzed. Furthermore, using term-document matrices, we were able to visualize the terms that had significant/insignificant contributions to the scheme of products. Finally, we were able to determine which products were most similar to the "Kappa Smart Watch".
