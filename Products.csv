@@ -1,0 +1,21 @@
+ProductID,ProductName,Specifications,CategoryID,SupplierID
+41,Alpha Smartphone,"64GB Storage, Black Color, 6.1-inch OLED Display, A14 Bionic Chip, Dual-camera system",31,50
+42,Beta Smartphone,"128GB Storage, White Color, Face ID, A14 Bionic Chip, Water and Dust Resistant",31,50
+43,Gamma Laptop,"15-inch Retina display, 256GB SSD, 16GB RAM, 10th-generation Intel Core i7 processor, Touch Bar and Touch ID",32,50
+44,Delta Laptop,"13-inch Retina display, 512GB SSD, 16GB RAM, 8-core CPU, 8-core GPU, 20 hours battery life",32,40
+45,Epsilon Tablet,"10-inch Full HD Display, 64GB Internal Storage, Octa-core Processor, Long-lasting Battery",33,40
+46,Zeta Tablet,"8-inch HD Display, 32GB Internal Storage, Quad-core Processor, Lightweight Design",33,40
+47,Eta Headphone,"Wireless Connectivity, Noise Cancellation, Over-ear Design, 20 Hours Playtime, Built-in Microphone",34,35
+48,Theta Headphone,"Wired Connectivity, In-Ear Design, Tangle-free Cable, Integrated Microphone, Deep Bass",34,35
+49,Iota Smart Watch,"GPS Enabled, Heart Rate Monitor, OLED Retina Display, Water Resistant, Notifications",35,35
+50,Kappa Smart Watch,"Fitness Tracking, Waterproof up to 50m, Sleep Monitoring, High and Low Heart Rate Notifications, Bluetooth",35,45
+51,Lambda Console,"1TB Storage, 2 Wireless Controllers, 4K Gaming, HDR Technology, Blu-ray Player",36,45
+52,Mu Console,"500GB Storage, VR Ready, 8-Core x86-64 AMD Jaguar CPU, GDDR5 8GB Memory, Blu-ray and DVD Player",36,45
+53,Nu Camera,"DSLR Camera, 24MP Full-Frame CMOS Sensor, 4K Video Recording, Built-in Wi-Fi, 3.2 inches Touchscreen LCD",37,33
+54,Xi Camera,"Mirrorless Camera, 20MP Sensor, Compact Build, Interchangeable Lens, 4K Video Recording",37,33
+55,Omicron Printer,"Inkjet Printer, Wireless Printing, Color Printer, Mobile Printing, Print, Scan, Copy Functions",38,33
+56,Pi Printer,"Laser Printer, Multifunction with Fax, High-speed Printing, Ethernet Networking, Duplex Printing",38,33
+57,Rho Monitor,"27-inch 4K UHD Monitor, IPS Display, 5ms Response Time, HDMI and DisplayPort, Adjustable Stand",39,50
+58,Sigma Monitor,"24-inch Full HD 1080p Monitor, LED Display, 1ms Response Time, HDMI and VGA Ports, Slim Design",39,33
+59,Tau Speaker,"Bluetooth Connectivity, Waterproof Design, Portable Speaker, 360° Sound, Built-in Microphone",40,33
+60,Upsilon Speaker,"Bookshelf Speaker, Wired Connectivity, Wooden Enclosure, 60W RMS Power, 5.25"" Woofer",40,33
